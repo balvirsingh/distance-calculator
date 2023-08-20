@@ -1,0 +1,13 @@
+version: "3.5"
+
+services:
+  apache:
+    build:
+      context: ./
+      target: base
+    container_name: php_apache
+    restart: always
+    volumes:
+      - ./:/var/www/html
+    ports:
+      - "5000:80"
