@@ -1,5 +1,5 @@
 # Dockerfile
-FROM php:7.4-apache AS base
+FROM php:8.2-apache AS base
 
 # ENABLE REWRITING
 RUN a2enmod rewrite

@@ -18,7 +18,7 @@ https://docs.docker.com/compose/install/
 Without Docker -
 If do you want to install without docker then the following are the requirements -
 Apache2
-PHP 7.4
+PHP 8.2.5
 
 For non-docker project, commands are the same (skip first command)
 
@@ -36,3 +36,11 @@ docker-compose up
 ```
 ./docker-php composer install
 ```
+
+3. Command to calculate the distance (add the api key in .env file before run this command)
+
+```
+./docker-php bin/console app:distance-calculate
+```
+
+After run the command, The CSV file will be generated in the public folder of the application.
