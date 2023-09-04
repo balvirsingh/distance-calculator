@@ -2,104 +2,65 @@
 
 namespace App\Service;
 
-use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use App\Interface\CsvGeneratorInterface;
 
 class DistanceCalculatorService
 {
-    public function __construct(private HttpService $httpService, private ParameterBagInterface $params, private CsvGeneratorService $csvGeneratorService)
+    public function __construct(private CsvGeneratorInterface $csvGeneratorInterface, private GeoLocationService $geoLocationService)
     {
     }
     
     /**
-     * @return array
+     * @return string
      */
-    public function process() : array
+    public function process() : string
     {
-        try {
-            $addresses = AddressService::getAddresses();
-            $apiKey = $this->params->get('geolocation_api_key');
-            $geolocationApiUrl = $this->params->get('geolocation_api_url');
-            $hqLatitude = $this->params->get('hq_address_latitude');
-            $hqLongitude = $this->params->get('hq_address_longitude');
-            
-            $result = $errors = [];
-            foreach ($addresses as $name => $address) {
-                $data = [
-                    'url' => $geolocationApiUrl,
-                    'query' => ['access_key' => $apiKey, 'query' => $address],
-                ];
-                
-                $response = $this->httpService->requestApi($data);
-                if (200 === $response['statusCode']) {
-                    $content = $response['content']['data'][0] ?? null;
-                    $distance = $this->calculateDistance($hqLatitude, $hqLongitude, $content['latitude'], $content['longitude']);
-                    $result[] = [
-                        'distance' => $distance,
-                        'name' => $name,
-                        'address' => $address,
-                    ];
-                } else {
-                    $errors[] = $response['error'];
-                }
-            }
-            
-            // Sort by distance
-            usort($result, function ($a, $b) {
-                return $a['distance'] <=> $b['distance'];
-            });
-
-            //Csv generate Process
-            $this->csvGenerateProcess($result);
-            
-            return !empty($result) ? $result : $errors;
-        } catch (\Exception $e) {
-            throw new \RuntimeException('Error: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * @param float $lat1
-     * @param float $lon1
-     * @param float $lat2
-     * @param float $lon2
-     *
-     * @return float|int
-     */
-    private function calculateDistance($lat1, $lon1, $lat2, $lon2): float|int
-    {
-        $earthRadius = 6371;
-    
-        $lat1Rad = deg2rad($lat1);
-        $lon1Rad = deg2rad($lon1);
-        $lat2Rad = deg2rad($lat2);
-        $lon2Rad = deg2rad($lon2);
-    
-        $deltaLat = $lat2Rad - $lat1Rad;
-        $deltaLon = $lon2Rad - $lon1Rad;
-    
-        $a = sin($deltaLat / 2) * sin($deltaLat / 2) +
-             cos($lat1Rad) * cos($lat2Rad) *
-             sin($deltaLon / 2) * sin($deltaLon / 2);
-    
-        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
-    
-        $distance = $earthRadius * $c;
-    
-        return round($distance, 2);
+        list($result, $errors) = $this->geoLocationService->calculateDistances();
+        
+        //format data and Csv generate Process
+        $result = $this->prepareDataAndGenerateCsv($result);
+        
+        return $this->returnResponse($result, $errors);
     }
 
     /**
      * @param array $result
      *
-     * @return void
+     * @return string | null
      */
-    private function csvGenerateProcess($result = []): void
+    private function prepareDataAndGenerateCsv(array $result = []): string | null
+    {
+        $resultString = "";
+        if (!empty($result)) {
+            $resultString = "Sort number, Distance, Name, Address" . PHP_EOL;
+            foreach ($result as $key => $data) {
+                $sortNumber = $key + 1;
+                $resultString .= "$sortNumber,\"{$data->getDistance()} km\",\"{$data->getName()}\",\"{$data->getAddress()}\"" . PHP_EOL;
+            }
+
+            // Generate the CSV file
+            $this->csvGeneratorInterface->generateCsvFile($resultString, 'addresses.csv');
+        }
+
+        return $resultString;
+    }
+
+    /**
+     * @param string $result
+     * @param array $errors
+     *
+     * @return string
+     */
+    private function returnResponse(string $result, array $errors): string
     {
         if (!empty($result)) {
-            $headers = ['Distance', 'Name', 'Address'];
-            array_unshift($result, $headers);
-                    
-            $this->csvGeneratorService->generateCsvFile($result, 'addresses.csv');
+            return $result;
         }
+    
+        if (!empty($errors)) {
+            return implode("\n", $errors);
+        }
+    
+        return 'An unexpected error occurred.';
     }
 }

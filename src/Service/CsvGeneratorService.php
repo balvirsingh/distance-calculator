@@ -2,22 +2,17 @@
 
 namespace App\Service;
 
+use App\Interface\CsvGeneratorInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
-class CsvGeneratorService
+class CsvGeneratorService implements CsvGeneratorInterface
 {
     public function __construct(private ParameterBagInterface $params)
     {
     }
 
-    public function generateCsvFile(array $data, string $filename): string
+    public function generateCsvFile(string $csvContent, string $filename): string
     {
-        // Create CSV content
-        $csvContent = '';
-        foreach ($data as $row) {
-            $csvContent .= '"' . implode('","', $row) . "\"\n";
-        }
-
         // Define the file path in the public folder
         $filePath = $this->params->get('kernel.project_dir') . '/public/' . $filename;
 

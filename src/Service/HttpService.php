@@ -3,8 +3,9 @@
 namespace App\Service;
 
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use App\Interface\HttpInterface;
 
-class HttpService
+class HttpService implements HttpInterface
 {
     public function __construct(private HttpClientInterface $httpClient)
     {

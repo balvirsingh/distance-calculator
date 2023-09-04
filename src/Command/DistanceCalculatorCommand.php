@@ -9,10 +9,8 @@ use App\Service\DistanceCalculatorService;
 
 class DistanceCalculatorCommand extends Command
 {
-    private $distanceCalculatorService;
-    public function __construct(DistanceCalculatorService $distanceCalculatorService)
+    public function __construct(private DistanceCalculatorService $distanceCalculatorService)
     {
-        $this->distanceCalculatorService = $distanceCalculatorService;
         parent::__construct();
     }
 
@@ -34,7 +32,7 @@ class DistanceCalculatorCommand extends Command
     {
         try {
             $response = $this->distanceCalculatorService->process();
-            $output->writeln(var_export($response, true));
+            $output->writeln($response);
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
